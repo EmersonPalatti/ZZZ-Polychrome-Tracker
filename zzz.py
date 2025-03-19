@@ -7,7 +7,7 @@ import json
 
 # Configuração inicial
 st.set_page_config(layout="wide")
-st.image('Site-logo-squaded.png', width=60)
+st.image('Site-logo-squaded.PNG', width=60)
 st.title('ZZZ Polychrome Tracker')
 
 # JavaScript para salvar no localStorage
