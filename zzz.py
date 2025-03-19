@@ -4,8 +4,6 @@ import plotly.express as px
 import math
 from datetime import datetime, date
 import json
-import sqlite3
-import uuid
 import os
 
 # Configuração inicial
@@ -13,23 +11,11 @@ st.set_page_config(layout="wide")
 st.image('Site-logo-squaded.PNG', width=60)
 st.title('ZZZ Polychrome Tracker')
 
-# Conexão com o banco de dados SQLite
-DB_PATH = "zzz_tracker.db"
+# Caminho para o arquivo JSON
+DATA_FILE = "zzz_tracker_data.json"
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS user_data (
-        user_id TEXT PRIMARY KEY,
-        data TEXT
-    )''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# Função para carregar dados do banco de dados
-def load_data(user_id):
+# Função para carregar dados do arquivo JSON
+def load_data():
     default_data = {
         'polychromes': 0,
         'encrypted_tapes': 0,
@@ -43,37 +29,24 @@ def load_data(user_id):
         'residual_store': True,
         'is_pity': 'No'
     }
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT data FROM user_data WHERE user_id = ?", (user_id,))
-    result = c.fetchone()
-    conn.close()
-    if result:
+    if os.path.exists(DATA_FILE):
         try:
-            return json.loads(result[0])
+            with open(DATA_FILE, 'r') as f:
+                return json.load(f)
         except json.JSONDecodeError:
             return default_data
     return default_data
 
-# Função para salvar dados no banco de dados
-def save_data(user_id, data):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT OR REPLACE INTO user_data (user_id, data) VALUES (?, ?)",
-              (user_id, json.dumps(data)))
-    conn.commit()
-    conn.close()
-
-# Gerar ou recuperar o user_id
-if 'user_id' not in st.session_state:
-    st.session_state.user_id = str(uuid.uuid4())  # Gera um UUID único para o usuário
-st.write(f"Seu ID único (guarde este ID para recuperar seus dados): {st.session_state.user_id}")
+# Função para salvar dados no arquivo JSON
+def save_data(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f)
 
 # Inicializar session_state com dados salvos
 if 'data' not in st.session_state:
-    st.session_state.data = load_data(st.session_state.user_id)
+    st.session_state.data = load_data()
 elif st.session_state.data is None:
-    st.session_state.data = load_data(st.session_state.user_id)
+    st.session_state.data = load_data()
 
 # Funções auxiliares
 def calculate_pulls(polychromes, monochromes, tapes, banner_count):
@@ -115,7 +88,7 @@ def calculate_expected_polychromes(days, pb_polychrome=False, pb_weapon=False):
 # Função para atualizar os dados salvos
 def update_data(key, value):
     st.session_state.data[key] = value
-    save_data(st.session_state.user_id, st.session_state.data)
+    save_data(st.session_state.data)
 
 # Layout principal
 col1, col2 = st.columns(2, border=True)
