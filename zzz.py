@@ -8,6 +8,23 @@ import os
 
 # Configuração inicial
 st.set_page_config(layout="wide")
+
+# Verificação de senha
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("ZZZ Polychrome Tracker - Autenticação")
+    password = st.text_input("Digite a senha para acessar o app:", type="password")
+    if st.button("Entrar"):
+        if password == "Ee461600@":  # Substitua por uma senha de sua escolha
+            st.session_state.authenticated = True
+            st.rerun()  # Recarrega o app após autenticação
+        else:
+            st.error("Senha incorreta. Tente novamente.")
+    st.stop()  # Para a execução do app se não estiver autenticado
+
+# Se autenticado, exibe o app
 st.image('Site-logo-squaded.PNG', width=60)
 st.title('ZZZ Polychrome Tracker')
 
@@ -104,7 +121,7 @@ with col1:
                                           key='encrypted_tapes', on_change=lambda: update_data('encrypted_tapes', st.session_state.encrypted_tapes))
     with col4:
         monochromes = st.number_input('**-> Current Monochromes**', value=st.session_state.data['monochromes'],
-                                      placeholder='Input your monochromes', key='monochromes',
+                                      placeholder='Input your polychromes', key='monochromes',
                                       on_change=lambda: update_data('monochromes', st.session_state.monochromes))
         master_tapes = st.number_input('**-> Master Tapes**', value=st.session_state.data['master_tapes'],
                                        key='master_tapes', on_change=lambda: update_data('master_tapes', st.session_state.master_tapes))
@@ -170,51 +187,4 @@ with col30:
     with col34:
         residual_store = st.toggle('Residual Signal Store', value=st.session_state.data['residual_store'],
                                    help='Converts pulls into Encrypted Master Tapes.', key='residual_store',
-                                   on_change=lambda: update_data('residual_store', st.session_state.residual_store))
-        limited_pulls = calculate_pulls(polychromes, monochromes, encrypted_tapes, limited_pity_count)
-        residual_count = int(((((limited_pulls * 160 + total_polychromes) / 10) * 15) + (((limited_pulls * 160 + total_polychromes) / 76) * 40)) / 20) if residual_store else 0
-    
-    with col32:
-        total_pulls = int(residual_count / 160 + (total_polychromes / 160))
-        st.metric('Expected Total Pulls', total_pulls, border=True)
-    
-    with col33:
-        total_polychromes_with_residual = int(total_polychromes + residual_count)
-        st.metric('Expected Polychromes', total_polychromes_with_residual, border=True)
-    
-    with col34:
-        total_attempts = total_pulls / 76
-        st.metric('Expected Attempts', f'{total_attempts:.2f}', border=True, help='Total Pulls / 76')
-
-    with st.expander('Polychrome Accumulation Graph'):
-        cumulative_df = pd.DataFrame({
-            'Day': range(days + 1),
-            'Polychromes': [sum(
-                [(d * 60), int(d / 7 * 60), int(720 / 15 * d), int(d / 15 * 300),
-                 int(d / 7 * 160), int((160 * 5 / 30) * d), int((160 * 10 / 42) * d),
-                 int(2320 / 42 * d), int(300 / 42 * d), int(600 / 42 * d),
-                 int(90 * d) if pb_polychrome else 0,
-                 int(((160 * 4 / 42) + 780 / 42) * d) if pb_weapon else 0]
-            ) for d in range(days + 1)]
-        })
-        fig = px.line(cumulative_df, x='Day', y='Polychromes', title='Polychrome Accumulation Over Time',
-                      labels={'Polychromes': 'Total Polychromes', 'Day': 'Days'},
-                      template='plotly_dark')
-        st.plotly_chart(fig, use_container_width=True)
-
-    with st.expander('Expected Maintenance Dates'):
-        st.dataframe(m_dates, hide_index=True)
-
-with col31:
-    st.subheader(':material/table: Expected Polychrome Details', divider='gray')
-    st.dataframe(df, hide_index=True)
-
-with col2:
-    st.subheader(':material/trending_up: Polychrome Calculator', divider='gray')
-    universal_attempts = (limited_pulls + total_pulls) / 76
-    st.metric('Total Polychrome Attempts', f'{universal_attempts:.2f}', border=True, help='Total Pulls / 76')
-    
-    is_pity = st.selectbox('Is on Guaranteed Pity?', ['No', 'Yes'], index=['No', 'Yes'].index(st.session_state.data['is_pity']),
-                           key='is_pity', on_change=lambda: update_data('is_pity', st.session_state.is_pity))
-    guaranteed_copies = math.floor(universal_attempts / 2 + (1 if is_pity == 'Yes' and universal_attempts % 2 != 0 else 0))
-    st.metric('Guaranteed Copies', guaranteed_copies, border=True)
+                                   on_change=lambda: update_data('residual_store', st
