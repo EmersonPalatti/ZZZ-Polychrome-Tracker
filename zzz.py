@@ -4,15 +4,32 @@ import plotly.express as px
 import math
 from datetime import datetime, date
 import json
-from streamlit_javascript import st_javascript
+import sqlite3
+import uuid
+import os
 
 # Configuração inicial
 st.set_page_config(layout="wide")
 st.image('Site-logo-squaded.PNG', width=60)
 st.title('ZZZ Polychrome Tracker')
 
-# Função para carregar dados do localStorage
-def load_data():
+# Conexão com o banco de dados SQLite
+DB_PATH = "zzz_tracker.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS user_data (
+        user_id TEXT PRIMARY KEY,
+        data TEXT
+    )''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# Função para carregar dados do banco de dados
+def load_data(user_id):
     default_data = {
         'polychromes': 0,
         'encrypted_tapes': 0,
@@ -26,34 +43,37 @@ def load_data():
         'residual_store': True,
         'is_pity': 'No'
     }
-    # Tentar carregar do localStorage
-    js_code = "localStorage.getItem('zzz_tracker_data');"
-    data = st_javascript(js_code)
-    if data and isinstance(data, str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT data FROM user_data WHERE user_id = ?", (user_id,))
+    result = c.fetchone()
+    conn.close()
+    if result:
         try:
-            loaded_data = json.loads(data)
-            st.session_state.load_status = "Dados carregados do localStorage com sucesso!"
-            return loaded_data
+            return json.loads(result[0])
         except json.JSONDecodeError:
-            st.session_state.load_status = "Erro ao decodificar dados do localStorage. Usando valores padrão."
             return default_data
-    st.session_state.load_status = "Nenhum dado encontrado no localStorage. Usando valores padrão."
     return default_data
 
-# Função para salvar dados no localStorage
-def save_data(data):
-    js_code = f"localStorage.setItem('zzz_tracker_data', JSON.stringify({json.dumps(data)}));"
-    result = st_javascript(js_code)
-    if result is not None:
-        st.session_state.save_status = "Dados salvos no localStorage com sucesso!"
-    else:
-        st.session_state.save_status = "Falha ao salvar dados no localStorage."
+# Função para salvar dados no banco de dados
+def save_data(user_id, data):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT OR REPLACE INTO user_data (user_id, data) VALUES (?, ?)",
+              (user_id, json.dumps(data)))
+    conn.commit()
+    conn.close()
+
+# Gerar ou recuperar o user_id
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = str(uuid.uuid4())  # Gera um UUID único para o usuário
+st.write(f"Seu ID único (guarde este ID para recuperar seus dados): {st.session_state.user_id}")
 
 # Inicializar session_state com dados salvos
 if 'data' not in st.session_state:
-    st.session_state.data = load_data()
+    st.session_state.data = load_data(st.session_state.user_id)
 elif st.session_state.data is None:
-    st.session_state.data = load_data()
+    st.session_state.data = load_data(st.session_state.user_id)
 
 # Funções auxiliares
 def calculate_pulls(polychromes, monochromes, tapes, banner_count):
@@ -95,15 +115,7 @@ def calculate_expected_polychromes(days, pb_polychrome=False, pb_weapon=False):
 # Função para atualizar os dados salvos
 def update_data(key, value):
     st.session_state.data[key] = value
-
-# Botão para salvar manualmente
-if st.button("Salvar Dados"):
-    save_data(st.session_state.data)
-    st.success(st.session_state.get('save_status', 'Salvando...'))
-
-# Mostrar status de carregamento (para depuração)
-if 'load_status' in st.session_state:
-    st.write(st.session_state.load_status)
+    save_data(st.session_state.user_id, st.session_state.data)
 
 # Layout principal
 col1, col2 = st.columns(2, border=True)
