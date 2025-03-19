@@ -8,7 +8,7 @@ from streamlit_javascript import st_javascript
 
 # Configuração inicial
 st.set_page_config(layout="wide")
-st.image('Site-logo-squaded.png', width=60)
+st.image('Site-logo-squaded.PNG', width=60)
 st.title('ZZZ Polychrome Tracker')
 
 # Função para carregar dados do localStorage
