@@ -4,25 +4,16 @@ import plotly.express as px
 import math
 from datetime import datetime, date
 import json
+from streamlit_javascript import st_javascript
 
 # Configuração inicial
 st.set_page_config(layout="wide")
-st.image('Site-logo-squaded.PNG', width=60)
+st.image('Site-logo-squaded.png', width=60)
 st.title('ZZZ Polychrome Tracker')
 
-# JavaScript para salvar no localStorage
-st.markdown("""
-<script>
-function saveData(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
-}
-document.saveTrackerData = saveData;
-</script>
-""", unsafe_allow_html=True)
-
-# Função para definir os dados padrão
-def get_default_data():
-    return {
+# Função para carregar dados do localStorage
+def load_data():
+    default_data = {
         'polychromes': 0,
         'encrypted_tapes': 0,
         'monochromes': 0,
@@ -35,19 +26,26 @@ def get_default_data():
         'residual_store': True,
         'is_pity': 'No'
     }
+    # Carregar do localStorage
+    js_code = "localStorage.getItem('zzz_tracker_data');"
+    data = st_javascript(js_code)
+    if data and isinstance(data, str):
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            return default_data
+    return default_data
 
 # Função para salvar dados no localStorage
 def save_data(data):
-    script = f"""
-    <script>
-    document.saveTrackerData('zzz_tracker_data', {json.dumps(data)});
-    </script>
-    """
-    st.markdown(script, unsafe_allow_html=True)
+    js_code = f"localStorage.setItem('zzz_tracker_data', JSON.stringify({json.dumps(data)}));"
+    st_javascript(js_code)
 
-# Inicializar session_state com dados padrão se não existir
+# Inicializar session_state com dados salvos
 if 'data' not in st.session_state:
-    st.session_state.data = get_default_data()
+    st.session_state.data = load_data()
+elif st.session_state.data is None:  # Evitar sobrescrever com None
+    st.session_state.data = load_data()
 
 # Funções auxiliares
 def calculate_pulls(polychromes, monochromes, tapes, banner_count):
