@@ -31,20 +31,28 @@ def load_data():
     data = st_javascript(js_code)
     if data and isinstance(data, str):
         try:
-            return json.loads(data)
+            loaded_data = json.loads(data)
+            st.session_state.load_status = "Dados carregados do localStorage com sucesso!"
+            return loaded_data
         except json.JSONDecodeError:
+            st.session_state.load_status = "Erro ao decodificar dados do localStorage. Usando valores padrão."
             return default_data
+    st.session_state.load_status = "Nenhum dado encontrado no localStorage. Usando valores padrão."
     return default_data
 
 # Função para salvar dados no localStorage
 def save_data(data):
     js_code = f"localStorage.setItem('zzz_tracker_data', JSON.stringify({json.dumps(data)}));"
-    st_javascript(js_code)
+    result = st_javascript(js_code)
+    if result is not None:
+        st.session_state.save_status = "Dados salvos no localStorage com sucesso!"
+    else:
+        st.session_state.save_status = "Falha ao salvar dados no localStorage."
 
 # Inicializar session_state com dados salvos
 if 'data' not in st.session_state:
     st.session_state.data = load_data()
-elif st.session_state.data is None:  # Evitar sobrescrever com None
+elif st.session_state.data is None:
     st.session_state.data = load_data()
 
 # Funções auxiliares
@@ -87,7 +95,15 @@ def calculate_expected_polychromes(days, pb_polychrome=False, pb_weapon=False):
 # Função para atualizar os dados salvos
 def update_data(key, value):
     st.session_state.data[key] = value
+
+# Botão para salvar manualmente
+if st.button("Salvar Dados"):
     save_data(st.session_state.data)
+    st.success(st.session_state.get('save_status', 'Salvando...'))
+
+# Mostrar status de carregamento (para depuração)
+if 'load_status' in st.session_state:
+    st.write(st.session_state.load_status)
 
 # Layout principal
 col1, col2 = st.columns(2, border=True)
