@@ -4,15 +4,20 @@ import plotly.express as px
 import math
 from datetime import datetime, date
 import json
-from streamlit_javascript import st_javascript
+import os
 
 # Configuração inicial
 st.set_page_config(layout="wide")
 st.image('Site-logo-squaded.PNG', width=60)
 st.title('ZZZ Polychrome Tracker')
 
-# Função para carregar dados do localStorage
-def load_data():
+# Caminho para o arquivo de dados
+DATA_DIR = "user_data"
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
+# Função para carregar dados do arquivo
+def load_data(user_id):
     default_data = {
         'polychromes': 0,
         'encrypted_tapes': 0,
@@ -26,28 +31,34 @@ def load_data():
         'residual_store': True,
         'is_pity': 'No'
     }
-    # Carregar do localStorage
-    js_code = "localStorage.getItem('zzz_tracker_data');"
-    data = st_javascript(js_code)
-    if data and isinstance(data, str):
+    file_path = os.path.join(DATA_DIR, f"{user_id}.json")
+    if os.path.exists(file_path):
         try:
-            return json.loads(data)
+            with open(file_path, 'r') as f:
+                return json.load(f)
         except json.JSONDecodeError:
             return default_data
     return default_data
 
-# Função para salvar dados no localStorage
-def save_data(data):
-    js_code = f"localStorage.setItem('zzz_tracker_data', JSON.stringify({json.dumps(data)}));"
-    st_javascript(js_code)
+# Função para salvar dados no arquivo
+def save_data(user_id, data):
+    file_path = os.path.join(DATA_DIR, f"{user_id}.json")
+    with open(file_path, 'w') as f:
+        json.dump(data, f)
+
+# Identificador do usuário
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = st.text_input("Digite um ID único para salvar seus dados:", value="user_default")
+else:
+    st.session_state.user_id = st.text_input("Digite um ID único para salvar seus dados:", value=st.session_state.user_id)
 
 # Inicializar session_state com dados salvos
 if 'data' not in st.session_state:
-    st.session_state.data = load_data()
-elif st.session_state.data is None:  # Evitar sobrescrever com None
-    st.session_state.data = load_data()
+    st.session_state.data = load_data(st.session_state.user_id)
+elif st.session_state.data is None:
+    st.session_state.data = load_data(st.session_state.user_id)
 
-# Funções auxiliares
+# Funções auxiliares (mantidas iguais)
 def calculate_pulls(polychromes, monochromes, tapes, banner_count):
     return ((polychromes + monochromes) / 160) + tapes + banner_count
 
@@ -87,9 +98,9 @@ def calculate_expected_polychromes(days, pb_polychrome=False, pb_weapon=False):
 # Função para atualizar os dados salvos
 def update_data(key, value):
     st.session_state.data[key] = value
-    save_data(st.session_state.data)
+    save_data(st.session_state.user_id, st.session_state.data)
 
-# Layout principal
+# Layout principal (o restante do código permanece igual, apenas ajustando as chamadas de update_data)
 col1, col2 = st.columns(2, border=True)
 
 with col1:
